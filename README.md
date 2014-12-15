@@ -20,7 +20,7 @@ This protocol opens up possibility to various events:
 
 ## Cryptography
 
-The underlying cryptography behind certification is the <a href="http://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm">ECDSA</a>.
+The underlying cryptography behind certification is the <a href="http://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm">ECDSA</a>, specifically the secp256k1, similiar to those employed by bitcoin.
 
 ## Specification
 
