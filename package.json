@@ -11,7 +11,8 @@
     "q": "1.1.2",
     "sqlite3": "3.0.4",
     "bitcoinjs-lib": "1.4.2",
-    "jayson": "1.1.2"
+    "jayson": "1.1.2",
+    "async": "0.9.0"
   },
   "repository": {
     "type": "git",
