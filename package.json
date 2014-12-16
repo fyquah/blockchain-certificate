@@ -1,0 +1,27 @@
+{
+  "name": "blockchain-certificate",
+  "version": "0.0.1",
+  "description": "certificates in the blockchain",
+  "main": "lib/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "bs58check": "1.0.3",
+    "q": "1.1.2",
+    "sqlite3": "3.0.4",
+    "bitcoinjs-lib": "1.4.2",
+    "node-json-rpc": "0.0.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fyquah95/blockchain-certificate.git"
+  },
+  "author": "fyquah95",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/fyquah95/blockchain-certificate/issues"
+  },
+  "homepage": "https://github.com/fyquah95/blockchain-certificate",
+  "engine": "node 0.10.31"
+}
