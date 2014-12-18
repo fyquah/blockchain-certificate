@@ -1,3 +1,4 @@
 *.sqlite3
 .DS_STORE
 node_modules/
+sample_data/
