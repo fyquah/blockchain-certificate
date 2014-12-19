@@ -12,7 +12,11 @@
     "sqlite3": "",
     "bitcoinjs-lib": "1.4.2",
     "jayson": "1.1.2",
-    "async": "0.9.0"
+    "async": "0.9.0",
+    "ecdsa": "",
+    "secure-random": "",
+    "ecurve": "",
+    "bigi": ""
   },
   "repository": {
     "type": "git",
