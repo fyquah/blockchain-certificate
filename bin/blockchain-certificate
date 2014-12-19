@@ -1,0 +1,7 @@
+#!/usr/bin/env node
+var index = require(__dirname + "/../lib/index.js");
+var argv = require('minimist')(process.argv.slice(2));
+index.start({
+    "port": (argv.port || argv.p),
+    "interval": ((argv.interval || argv.i) * 1000)
+});

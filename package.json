@@ -1,11 +1,18 @@
 {
   "name": "blockchain-certificate",
   "version": "0.0.1",
-  "description": "certificates in the blockchain",
+  "author": "fuyong@fyquah.me",
+  "description": "a service to make certificates in the blockchain. Anyone can issue certificates",
   "main": "lib/index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "preferGlobal": false,
+  "bin": {
+    "blockchain-certificate": "./bin/blockchain-certificate"
   },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "./blockchain-certificate"
+  },
+  "main": "lib/index.js",
   "dependencies": {
     "bs58check": "1.0.3",
     "q": "1.1.2",
@@ -13,16 +20,16 @@
     "bitcoinjs-lib": "1.4.2",
     "jayson": "1.1.2",
     "async": "0.9.0",
-    "ecdsa": "",
-    "secure-random": "",
-    "ecurve": "",
-    "bigi": ""
+    "ecdsa": "0.6.0",
+    "secure-random": "1.1.1",
+    "ecurve": "1.0.0",
+    "bigi": "1.4.0",
+    "minimist": "1.1.0"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/fyquah95/blockchain-certificate.git"
   },
-  "author": "fyquah95",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/fyquah95/blockchain-certificate/issues"
