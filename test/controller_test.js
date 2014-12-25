@@ -7,6 +7,7 @@ var ecdsa = require("ecdsa");
 var ecurve = require('ecurve');
 var BigInteger = require('bigi');
 var sr = require("secure-random");
+var bitcoind = require(__dirname + "/../lib/bitcoind.js");
 var constants = require(__dirname + "/../lib/constants.js");
 var controller = require(__dirname + "/../lib/controller.js");
 var models = require(__dirname + "/../lib/model.js");
@@ -33,30 +34,79 @@ var initializer = {
                 done();
             });
         });
+    },
+    "clear_db": function(done){
+        db.clear(function(){
+            done();
+        });
+    },
+    "color_unspent": function(done){
+        bitcoind("listunspent 0", function(err, res){
+            if (res.length == 0) { // there is nothing to color
+                done();
+                return;
+            }
+
+            var end_pos = res.length / 3 || 1;
+            var colored_inputs = res.slice(0, end_pos);
+
+            models.Node.find_by({
+                "metadata": initializer.node_metadata,
+                "destroyed": false
+            }, function(err, node){
+                if(err) return done(err);
+                async.each(colored_inputs, function(item, cb){
+                    var output = new models.RightsOutput({
+                        "txid": item.txid,
+                        "vout": item.vout,
+                        "node_id": node.id,
+                        "spent": false
+                    });
+                    output.create(function(err){
+                        cb(err);
+                    });
+                }, function(err){
+                    return err ? done(err) : done();
+                });
+            });
+        });
     }
 };
 
 describe("Controller", function(){
-    before(function(){
-        db.clear();
-    });
-
-    afterEach(function(){
-        console.log("clearing up database..");
-        db.clear();
-    });
+    before(initializer.clear_db);
 
     describe("#query", function(){
         
         // "listrights": ["auth_token"],
         describe("listrights", function(){
+            before(initializer.clear_db);
+            before(initializer.create_node_and_rights);
+            before(initializer.color_unspent);
 
+            it("should list all the colored unspent inputs", function(done){
+                controller.query({
+                    "method": "listrights"
+                }, function(err, colored){
+                    assert.equal(err, null);
+                    bitcoind("listunspent 0", function(err, all){
+                        assert.equal(err, null);
+                        colored.forEach(function(item){
+                            assert(all.some(function(x){
+                                return item.txid === x.txid && item.vout === x.vout;
+                            }));
+                        });
+                        done();
+                    });
+                });                
+            });
         });
 
         // "listnodes": ["auth_token"],
         describe("listnodes", function(done){
             var hexstrings = [];
 
+            before(initializer.clear_db);
             before(function(done){
                 var i, node;
                 for (i = 0 ; i < 100 ; i += 10) {
@@ -76,26 +126,20 @@ describe("Controller", function(){
                 }
 
             });
-            after(function(){
-                db.clear();
-            });
 
             it("should list all available nodes in the network", function(done){
                 controller.query({
                     "method": "listnodes"
-                }, function(){
-                    async.each(hexstrings, function(hexstring, cb){
-                        models.Node.find_by({
-                            "metadata": hexstring,
-                            "destroyed": false
-                        }, function(err, node){
-                            assert.equal(err, null);
-                            assert.notEqual(node, null);
-                            cb(null);
-                        })
-                    }, function(err){
-                        done();
-                    });
+                }, function(err, nodes){
+                    var i;
+                    for (i = 0 ; i < nodes.length ; i++) {
+                        var node = nodes[i];
+                        // check if the node is inside
+                        assert.equal(hexstrings.some(function(hexstring){
+                            return hexstring === node.metadata;
+                        }), true);
+                    }
+                    done();
                 })
             });
         });
@@ -108,6 +152,7 @@ describe("Controller", function(){
                 "mrSSTWZKy8he8dSnxbvrHFJrKao7axyqmj"
             ];
 
+            before(initializer.clear_db);
             before(function(done){
                 var n = new models.Node({
                     "metadata": initializer.node_metadata,
@@ -131,9 +176,6 @@ describe("Controller", function(){
                     });
                 });
             });
-            after(function(){
-                db.clear();
-            })
 
             it("should list users of a given node", function(done){
                 controller.query({
@@ -160,6 +202,7 @@ describe("Controller", function(){
                 getEncoded(true).toString("hex");
             var signature = ecdsa.sign(crypto.createHash('sha256').update(msg).digest(), private_key);
 
+            before(initializer.clear_db);
             before(initializer.create_node_and_rights);
             before(function(done){
                 models.Node.find_by({
@@ -177,13 +220,13 @@ describe("Controller", function(){
                             "user_id": user.id,
                             "type": "r",
                             "node_id": node.id,
-                            "metadata": signature.r.toString("16")
+                            "metadata": signature.r.toHex()
                         });
                         var s = new models.Signature({
                             "user_id": user.id,
                             "type": "s",
                             "node_id": node.id,
-                            "metadata": signature.s.toString("16")
+                            "metadata": signature.s.toHex()
                         });
                         r.create(function(err){
                             if(err) return done(err);
@@ -195,9 +238,6 @@ describe("Controller", function(){
                     })
                 });
             });
-            after(function(){
-                db.clear();
-            });
 
             it("should be able to verify document against some signature", function(done){
                 controller.query({
@@ -205,8 +245,8 @@ describe("Controller", function(){
                     "metadata": initializer.node_metadata,
                     "address": user_address,
                     "document": msg,
-                    "signature_r": signature.r.toString("16"),
-                    "signature_s": signature.s.toString("16")
+                    "signature_r": signature.r.toHex(),
+                    "signature_s": signature.s.toHex()
                 }, function(err, obj){
                     assert.equal(err, null);
                     assert.notEqual(obj, undefined);
@@ -222,12 +262,9 @@ describe("Controller", function(){
     });
 
     describe("#execute", function(){
-
-        after(function(){
-            db.clear();
-        });
-
         describe("op_initialize", function(){
+            before(initializer.clear_db);
+
             it("should create a new node in the database", function(done){
                 var metadata = "bbbbbba948904f2f0f479b8f8197694b30184b0d2ed1c1cd2a1ec0fb85d299a192a447";
                 controller.execute({
@@ -251,10 +288,8 @@ describe("Controller", function(){
         describe("op_register", function(){
             var public_key = "aab948904f2f0f479b8f8197694b30184b0d2ed1c1cd2a1ec0fb85d299a192a447";
 
+            before(initializer.clear_db);
             before(initializer.create_node_and_rights);
-            after(function(){
-                db.clear();
-            });
 
             it("should create a new user in the database", function(done){
                 controller.execute({
@@ -290,6 +325,7 @@ describe("Controller", function(){
             var signature_metadata = "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9";
             var user_address = "n1Ggjhc9XSgJ446yMQUdzk8UJ9won5uGer";
 
+            before(initializer.clear_db);
             before(initializer.create_node_and_rights);
             before(function(done){
                 models.Node.find_by({
@@ -307,9 +343,6 @@ describe("Controller", function(){
                         done();
                     });
                 })
-            });
-            after(function(){
-                db.clear();
             });
 
             it("should create a 'r' signature in the database", function(done){
@@ -356,6 +389,7 @@ describe("Controller", function(){
             var signature_metadata = "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9";
             var user_address = "n1Ggjhc9XSgJ446yMQUdzk8UJ9won5uGer";
 
+            before(initializer.clear_db);
             before(initializer.create_node_and_rights);
             before(function(done){
                 models.Node.find_by({
@@ -416,10 +450,8 @@ describe("Controller", function(){
         });
 
         describe("op_terminate_node", function(){
+            before(initializer.clear_db);
             before(initializer.create_node_and_rights);
-            after(function(){
-                db.clear();
-            });
 
             it("should terminate the node", function(done){
                 controller.execute({
