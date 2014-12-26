@@ -12,19 +12,19 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "./blockchain-certificate"
   },
-  "main": "lib/index.js",
   "dependencies": {
-    "bs58check": "1.0.3",
-    "q": "1.1.2",
-    "sqlite3": "3.0.4",
-    "bitcoinjs-lib": "1.4.2",
-    "jayson": "1.1.2",
     "async": "0.9.0",
-    "ecdsa": "0.6.0",
-    "secure-random": "1.1.1",
-    "ecurve": "1.0.0",
     "bigi": "1.4.0",
-    "minimist": "1.1.0"
+    "bitcoinjs-lib": "1.4.2",
+    "bs58check": "1.0.3",
+    "ecdsa": "0.6.0",
+    "ecurve": "1.0.0",
+    "jayson": "1.1.2",
+    "minimist": "1.1.0",
+    "q": "1.1.2",
+    "secure-random": "1.1.1",
+    "sequelize": "^2.0.0-rc4",
+    "sqlite3": "3.0.4"
   },
   "devDependencies": {
     "mocha": "2.0.1"
