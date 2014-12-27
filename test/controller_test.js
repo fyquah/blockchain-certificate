@@ -10,7 +10,7 @@ var sr = require("secure-random");
 var bitcoind = require(__dirname + "/../lib/bitcoind.js");
 var constants = require(__dirname + "/../lib/constants.js");
 var controller = require(__dirname + "/../lib/controller.js");
-var models = require(__dirname + "/../lib/model.js");
+var models = require(__dirname + "/../lib/models");
 var db = require(__dirname + "/../lib/models/db.js");
 
 var initializer = {
