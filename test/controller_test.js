@@ -34,6 +34,33 @@ var initializer = {
             });
         });
     },
+    "create_node_and_color_one_right": function(done){
+        var n = models.Node.build({
+            "metadata": initializer.node_metadata,
+            "destroyed": false
+        });
+        n.save().complete(function(err){
+            if(err) return done(err);
+            bitcoind("listunspent 0", function(err, arr){
+                if(err) return done(err);
+                if(arr.length === 0) {
+                    done({
+                        error: "insufficient funds in bitcoin wallet"
+                    });
+                }
+
+                var rights = models.RightsOutput.build({
+                    spent: false,
+                    txid: arr[0].txid,
+                    vout: arr[0].vout
+                });
+                n.addRightsOutputs(rights).complete(function(err){
+                    if(err) return done(err);
+                    done()
+                })
+            });
+        })
+    },
     "clear_db": function(done){
         async.each(["User", "RightsOutput", "Node", "Signature"], function(name, inner_cb){
             models[name].destroy().complete(function(err){
@@ -52,7 +79,6 @@ var initializer = {
 
             var end_pos = res.length / 3 || 1;
             var colored_inputs = res.slice(0, end_pos);
-
 
             models.Node.findOne({ where: {
                 "metadata": initializer.node_metadata,
@@ -271,7 +297,312 @@ describe("Controller", function(){
     });
 
     describe("#broadcast" , function(){
+        describe("initialize", function(){
+            var metadata = "bbbbbba948904f2f0f479b8f8197694b30184b0d2ed1c1cd2a1ec0fb85d299a192a447";
+            var txid;
+            before(initializer.clear_db);
+            before(function(done){
+                controller.broadcast({
+                    method: "initialize",
+                    metadata: metadata
+                }, function(err, res){
+                    if(err) return done(err);
+                    txid = res.txid;
+                    done();
+                });
+            });
 
+            it("should create a new node in the database", function(done){
+                models.Node.findOne({ where: {
+                    "metadata": metadata,
+                    "destroyed": false 
+                }}).complete(function(err, node){
+                    assert.equal(err, null);
+                    assert.notEqual(node, null);
+                    assert.equal(node.metadata, metadata);
+                    done();
+                })
+            });
+
+            it("should create the appropriate rights output in db", function(done){
+                models.Node.findOne({ where: {
+                    "metadata": metadata,
+                    "destroyed": false
+                }}).complete(function(err, node){
+                    if(err) return done(err);
+                    node.getRightsOutputs({ where: {
+                        txid: txid , vout: 0
+                    }}).complete(function(err, outputs){
+                        if(err) return done(err);
+                        var output = outputs[0];
+
+                        assert.notEqual(output, null);
+                        assert.equal(output.txid, txid);
+                        assert.equal(output.vout, 0);
+                        done();
+                    });
+                })
+            });
+
+            it("should create the appropriate bitcoin transaction", function(done){
+                bitcoind("getrawtransaction " + txid + " 1", function(err, tx){
+                    if(err) return done(err);
+                    // the results should contain an op_return output in the vout = 1
+                    var op_return = tx.vout[1].scriptPubKey.hex;
+                    assert.equal(op_return.substring(0, 2), "6a");
+                    assert.equal(op_return.substring(2, 4), "27");
+                    assert.equal(op_return.substring(4, 10), "424350");
+                    assert.equal(op_return.substring(10, 12), "00");
+                    assert.equal(op_return.substring(12, 82), metadata);
+                    done();
+                });
+            });
+        });
+
+        describe("registeruser", function(){
+            var user_address = "n1Ggjhc9XSgJ446yMQUdzk8UJ9won5uGer";
+            var public_key = "aab948904f2f0f479b8f8197694b30184b0d2ed1c1cd2a1ec0fb85d299a192a447";
+            var txid;
+
+            before(initializer.clear_db);
+            before(initializer.create_node_and_color_one_right);
+            before(function(done){
+                controller.broadcast({
+                    method: "registeruser",
+                    metadata: initializer.node_metadata,
+                    address: user_address,
+                    public_key: public_key
+                }, function(err, res){
+                    if(err) return done(err);
+                    txid = res.txid;
+                    done();
+                })
+            });
+
+            it("should create a user in the database", function(done){
+                models.Node.findOne({ where: {
+                    "metadata": initializer.node_metadata
+                }}).complete(function(err, node){
+                    if(err) done(err);
+                    assert.notEqual(node, null);
+                    node.getUsers({ where: {
+                        "address": user_address,
+                        "public_key": public_key
+                    }}).complete(function(err, users){
+                        if(err) done(err);
+                        assert.notEqual(users.length, 0);
+                        done();
+                    });
+                });
+            });
+            it("should create the appropriate rights output", function(done){
+                models.Node.findOne({ where: {
+                    "metadata": initializer.node_metadata,
+                    "destroyed": false
+                }}).complete(function(err, node){
+                    if(err) return done(err);
+                    node.getRightsOutputs({ where: {
+                        txid: txid , vout: 0
+                    }}).complete(function(err, outputs){
+                        if(err) return done(err);
+                        var output = outputs[0];
+
+                        assert.notEqual(output, null);
+                        assert.equal(output.txid, txid);
+                        assert.equal(output.vout, 0);
+                        done();
+                    });
+                });
+            });
+            it("should create the appropriate bitcoin transaction", function(done){
+                bitcoind("getrawtransaction " + txid + " 1", function(err, tx){
+                    if(err) return done(err);
+                    // the results should contain an op_return output in the vout = 1
+                    var op_return = tx.vout[1].scriptPubKey.hex;
+                    assert.equal(op_return.substring(0, 2), "6a");
+                    assert.equal(op_return.substring(2, 4), "25");
+                    assert.equal(op_return.substring(4, 10), "424350");
+                    assert.equal(op_return.substring(10, 12), "01");
+                    assert.equal(op_return.substring(12, 82), public_key);
+
+                    assert.equal(tx.vout[2].scriptPubKey.addresses[0], user_address);
+                    done();
+                });
+            });
+        });
+
+        describe("terminate", function(){
+            var txid;
+
+            before(initializer.clear_db);
+            before(initializer.create_node_and_color_one_right);
+            before(function(done){
+                controller.broadcast({
+                    method: "terminate",
+                    metadata: initializer.node_metadata
+                }, function(err, res){
+                    if(err) return done(err);
+
+                    txid = res.txid;
+                    done();
+                });
+            });
+
+            it("should mark the node as destroyed in the database", function(done){
+                models.Node.findOne({ where: {
+                    destroyed: true,
+                    metadata: initializer.node_metadata
+                }}).complete(function(err, node){
+                    if(err) return done(err);
+                    assert.notEqual(node, null);
+                    done();
+                });
+            });
+            it("should create an appropriate bitcoin transaction", function(done){
+                bitcoind("getrawtransaction " + txid + " 1", function(err, tx){
+                    if(err) return done(err);
+                    // special case for terminating resul,
+                    // if should contain an op_return output in the vout = 0
+                    var op_return = tx.vout[0].scriptPubKey.hex;
+                    assert.equal(op_return.substring(0, 2), "6a");
+                    assert.equal(op_return.substring(2, 4), "27");
+                    assert.equal(op_return.substring(4, 10), "424350");
+                    assert.equal(op_return.substring(10, 12), "ff");
+                    assert.equal(op_return.substring(12), initializer.node_metadata);
+                    done();
+                });
+            });
+        });
+
+        describe("broadcastsignature", function(){
+            var user_address = "n1Ggjhc9XSgJ446yMQUdzk8UJ9won5uGer";
+            var s_txid, r_txid;
+
+            var doc = "hello world";
+            var private_key = sr.randomBuffer(32);
+            var public_key = ecurve.getCurveByName('secp256k1').
+                G.multiply(BigInteger.fromBuffer(private_key)).
+                getEncoded(true).toString("hex");
+            var signature = ecdsa.sign(crypto.createHash('sha256').update(doc).digest(), private_key);
+
+            before(initializer.clear_db);
+            before(initializer.create_node_and_color_one_right);
+            before(function(done){
+                models.Node.findOne({ where: {
+                    metadata: initializer.node_metadata
+                }}).complete(function(err, node){
+                    if(err) return done(err);
+                    var user = models.User.build({
+                        "public_key": public_key,
+                        "address": user_address
+                    });
+                    node.addUser(user).complete(function(){
+                        if(err) return done(err);
+                        done();
+                    });
+                })
+            });
+            before(function(done){
+                controller.broadcast({
+                    method: "broadcastsignature",
+                    metadata: initializer.node_metadata,
+                    address: user_address,
+                    document: doc,
+                    signature_r: signature.r.toHex(),
+                    signature_s: signature.s.toHex()
+                }, function(err, res){
+                    if(err) return done(err);
+                    s_txid = res.s_txid;
+                    r_txid = res.r_txid;
+                    done();
+                })
+            });
+
+            it("should create the signatures in the database", function(done){
+                models.Node.findOne({ where: {
+                    metadata: initializer.node_metadata
+                }}).complete(function(err, node){
+                    if(err) return done(err);
+                    assert.notEqual(node, null);
+                    models.User.findOne({ where: {
+                        node_id: node.id,
+                        address: user_address
+                    }}).complete(function(err, user){
+                        assert.notEqual(user, null);
+                        models.Signature.findOne({ where: {
+                            type: "r",
+                            metadata: signature.r.toHex(),
+                            user_id: user.id
+                        }}).complete(function(err, res){
+                            if(err) return done(err);
+                            assert.notEqual(res, null);
+                            models.Signature.findOne({ where: {
+                                type: "s",
+                                metadata: signature.s.toHex(),
+                                user_id: user.id
+                            }}).complete(function(err, res){
+                                if(err) return done(err);
+                                assert.notEqual(res, null);
+                                done();
+                            });
+                        });
+                    })
+                });
+            });
+            it("should create an appropriate outputs (both spent and unspent)", function(done){
+                models.Node.findOne({ where: {
+                    "metadata": initializer.node_metadata,
+                    "destroyed": false
+                }}).complete(function(err, node){
+                    if(err) return done(err);
+                    node.getRightsOutputs({ where: {
+                        txid: r_txid , vout: 0, spent: true
+                    }}).complete(function(err, outputs){
+                        if(err) return done(err);
+                        var output = outputs[0];
+                        assert.notEqual(output, null);
+                        assert.notEqual(output, undefined);
+                        
+                        node.getRightsOutputs({ where: {
+                            txid: s_txid, vout: 0, spent: false
+                        }}).complete(function(err, outputs){
+                            if(err) return done(err);
+                            var output = outputs[0];
+                            assert.notEqual(output, null);
+                            assert.notEqual(output, undefined);
+                        })
+
+                        done();
+                    });
+                });
+            });
+            it("should create an appropriate bitcoin transaction", function(done){
+                bitcoind("getrawtransaction " + r_txid + " 1", function(err, tx){
+                    if(err) return done(err);
+                    // the results should contain an op_return output in the vout = 1
+                    var op_return = tx.vout[1].scriptPubKey.hex;
+                    assert.equal(op_return.substring(0, 2), "6a");
+                    assert.equal(op_return.substring(2, 4), "24");
+                    assert.equal(op_return.substring(4, 10), "424350");
+                    assert.equal(op_return.substring(10, 12), "02");
+                    assert.equal(op_return.substring(12), signature.r.toHex());
+                    assert.equal(tx.vout[2].scriptPubKey.addresses[0], user_address);
+                    
+                    bitcoind("getrawtransaction " + s_txid + " 1", function(err, tx){
+                        if(err) return done(er);
+                        var op_return = tx.vout[1].scriptPubKey.hex
+                        assert.equal(op_return.substring(0, 2), "6a");
+                        assert.equal(op_return.substring(2, 4), "24");
+                        assert.equal(op_return.substring(4, 10), "424350");
+                        assert.equal(op_return.substring(10, 12), "03");
+                        assert.equal(op_return.substring(12), signature.s.toHex());
+                        assert.equal(tx.vout[2].scriptPubKey.addresses[0], user_address);
+                        done();
+                    });
+
+                });
+            });
+        });
     });
 
     describe("#execute", function(){
