@@ -9,7 +9,7 @@ var BigInteger = require('bigi');
 var sr = require("secure-random");
 var bitcoind = require(__dirname + "/../lib/bitcoind.js");
 var constants = require(__dirname + "/../lib/constants.js");
-var controller = require(__dirname + "/../lib/controller.js");
+var controller = require(__dirname + "/../lib/controllers");
 var models = require(__dirname + "/../lib/models");
 
 var initializer = {
@@ -57,16 +57,16 @@ var initializer = {
             models.Node.findOne({ where: {
                 "metadata": initializer.node_metadata,
                 "destroyed": false
-            }}, function(err, node){
+            }}).complete(function(err, node){
                 if(err) return done(err);
                 async.each(colored_inputs, function(item, cb){
-                    var output = new models.RightsOutput({
+                    var output = models.RightsOutput.build({
                         "txid": item.txid,
                         "vout": item.vout,
                         "node_id": node.id,
                         "spent": false
                     });
-                    output.create(function(err){
+                    output.save().complete(function(err){
                         cb(err);
                     });
                 }, function(err){
