@@ -11,33 +11,36 @@ var bitcoind = require(__dirname + "/../lib/bitcoind.js");
 var constants = require(__dirname + "/../lib/constants.js");
 var controller = require(__dirname + "/../lib/controller.js");
 var models = require(__dirname + "/../lib/models");
-var db = require(__dirname + "/../lib/models/db.js");
 
 var initializer = {
     "node_metadata": "bbbbbba948904f2f0f479b8f8197694b30184b0d2ed1c1cd2a1ec0fb85d299a192a447",
     "output_txid": "a948904f2f0f479b8f8197694b30184b0d2ed1c1cd2a1ec0fb85d299a192a447",
     "create_node_and_rights": function(done){
-        var n = new models.Node({
-            "metadata": initializer.node_metadata,
+        console.log("creating node and rights");
+        var n = models.Node.build({
+            "metadata" :initializer.node_metadata,
             "destroyed": false
         });
-        n.create(function(err, results){
-            if(err) return done(err)
-            var rights = new models.RightsOutput({
+        n.save().complete(function(err){
+            if(err) return done(err);
+            var rights = models.RightsOutput.build({
                 "spent": false,
                 "txid": initializer.output_txid,
-                "vout": 0,
-                "node_id": results.id
+                "vout": 0
             });
-            rights.create(function(err, results){
+            n.addRightsOutputs(rights).complete(function(err){
                 if(err) return done(err);
                 done();
             });
         });
     },
     "clear_db": function(done){
-        db.clear(function(){
-            done();
+        async.each(["User", "RightsOutput", "Node", "Signature"], function(name, inner_cb){
+            models[name].destroy().complete(function(err){
+                inner_cb(err || null);
+            });
+        }, function(err){
+            done(err || undefined);
         });
     },
     "color_unspent": function(done){
@@ -50,10 +53,11 @@ var initializer = {
             var end_pos = res.length / 3 || 1;
             var colored_inputs = res.slice(0, end_pos);
 
-            models.Node.find_by({
+
+            models.Node.findOne({ where: {
                 "metadata": initializer.node_metadata,
                 "destroyed": false
-            }, function(err, node){
+            }}, function(err, node){
                 if(err) return done(err);
                 async.each(colored_inputs, function(item, cb){
                     var output = new models.RightsOutput({
@@ -66,7 +70,7 @@ var initializer = {
                         cb(err);
                     });
                 }, function(err){
-                    return err ? done(err) : done();
+                    return done(err || undefined);
                 });
             });
         });
@@ -114,15 +118,18 @@ describe("Controller", function(){
                 }
 
                 for (i = 0  ; i < hexstrings.length ; i++) {
-                    node = new models.Node({
-                        "destroyed": false,
-                        "metadata": hexstrings[i]
-                    });
-                    node.create();
-
-                    if(i == hexstrings.length - 1) {
-                        done();
-                    }
+                    (function(index){
+                        node = models.Node.build({
+                            "destroy": false,
+                            "metadata": hexstrings[i]
+                        });
+                        node.save().complete(function(err, results){
+                            if(err) return done(err);
+                            if(index === hexstrings.length - 1) {
+                                done();
+                            }
+                        })
+                    })(i);
                 }
 
             });
@@ -154,27 +161,29 @@ describe("Controller", function(){
 
             before(initializer.clear_db);
             before(function(done){
-                var n = new models.Node({
+
+                var n = models.Node.build({
                     "metadata": initializer.node_metadata,
                     "destroyed": false
                 });
-                n.create(function(err, node){
+                n.save().complete(function(err, node){
                     assert.equal(err, null);
                     assert.notEqual(addresses, null);
                     async.each(addresses, function(addr, cb){
-                        var user = new models.User({
+
+                        var user = models.User.build({
                             "address": addr,
-                            "node_id": node.id,
                             "public_key": "ef1ea5a5e38af57572c4e757f2c5ac51dee7796ec5ab076da3d61c990b43ba5fab"
                         });
-                        user.create(function(err){
+                        n.addUser(user).complete(function(err){
                             cb(err);
                         });
+
                     }, function(err){
                         assert.equal(err, null);
                         done();
                     });
-                });
+                })
             });
 
             it("should list users of a given node", function(done){
@@ -205,37 +214,41 @@ describe("Controller", function(){
             before(initializer.clear_db);
             before(initializer.create_node_and_rights);
             before(function(done){
-                models.Node.find_by({
+
+                models.Node.findOne({ where: {
                     "metadata": initializer.node_metadata,
                     "destroyed": false
-                }, function(err, node){
+                }}).complete(function(err, node){
+
                     if(err) return done(err);
-                    var u = new models.User({
+                    var user = models.User.build({
                         "address": user_address,
                         "public_key": public_key,
                         "node_id": node.id
                     });
-                    u.create(function(err, user){
-                        var r = new models.Signature({
+                    user.save().complete(function(err){
+                        if(err) return done(err);
+                        var r = models.Signature.build({
                             "user_id": user.id,
                             "type": "r",
                             "node_id": node.id,
                             "metadata": signature.r.toHex()
                         });
-                        var s = new models.Signature({
+                        var s = models.Signature.build({
                             "user_id": user.id,
                             "type": "s",
                             "node_id": node.id,
                             "metadata": signature.s.toHex()
                         });
-                        r.create(function(err){
+                        r.save().complete(function(err){
                             if(err) return done(err);
-                            s.create(function(err){
+                            s.save().complete(function(err){
                                 if(err) return done(err);
+                                console.log("hooks are good");
                                 done();
-                            });
-                        });
-                    })
+                            })
+                        })
+                    });
                 });
             });
 
@@ -272,10 +285,11 @@ describe("Controller", function(){
                     "metadata": new Buffer(metadata, "hex")
                 }, function(err){
                     assert.equal(err, null);
-                    models.Node.find_by({
+
+                    models.Node.findOne({ where: {
                         "metadata": metadata,
                         "destroyed": false
-                    }, function(err, results){
+                    }}).complete(function(err, results){
                         assert.equal(err, null);
                         assert.notEqual(results, null);
                         assert.equal(results.metadata, metadata);
@@ -301,16 +315,17 @@ describe("Controller", function(){
                         "vout": 0
                     }
                 }, function(err, results){
-                    models.Node.find_by({
+
+                    models.Node.findOne({ where: {
                         "metadata": initializer.node_metadata,
                         "destroyed": false
-                    }, function(err, node){
+                    }}).complete(function(err, node){
                         assert.equal(err, null);
                         assert.notEqual(node, null);
-                        models.User.find_by({
+                        models.User.findOne({ where: {
                             "public_key": public_key,
                             "node_id": node.id
-                        }, function(err, user){
+                        }}).complete(function(err, user){
                             assert.equal(err, null);
                             assert.notEqual(user, null);
                             assert.equal(user.public_key, public_key);
@@ -328,21 +343,20 @@ describe("Controller", function(){
             before(initializer.clear_db);
             before(initializer.create_node_and_rights);
             before(function(done){
-                models.Node.find_by({
+                models.Node.findOne({ where: {
                     "metadata": initializer.node_metadata,
                     "destroyed": false
-                }, function(err, node){
+                }}).complete(function(err, node){
                     if(err) return done(err);
-                    var user = new models.User({
+                    var user = models.User.build({
                         "public_key": "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9ac",
-                        "address": user_address,
-                        "node_id": node.id
+                        "address": user_address
                     });
-                    user.create(function(err, results){
+                    node.addUser(user).complete(function(){
                         if(err) return done(err);
                         done();
                     });
-                })
+                });
             });
 
             it("should create a 'r' signature in the database", function(done){
@@ -356,25 +370,25 @@ describe("Controller", function(){
                     }
                 }, function(err){
                     assert.equal(err, null);
-                    models.Node.find_by({
+                    models.Node.findOne({ where: {
                         "metadata": initializer.node_metadata,
                         "destroyed": false
-                    }, function(err, node){
+                    }}).complete(function(err, node){
                         assert.equal(err, null);
                         assert.equal(node.metadata, initializer.node_metadata);
-                        models.User.find_by({
+                        models.User.findOne({ where: {
                             "node_id": node.id,
                             "address": user_address
-                        }, function(err, user){
+                        }}).complete(function(err, user){
                             assert.equal(err, null);
                             assert.equal(user.address, user_address);
-                            models.Signature.find_by({
+                            models.Signature.findOne({ where: {
                                 "user_id": user.id,
-                                "node_id": node.id,
                                 "type": "r",
                                 "metadata": signature_metadata
-                            }, function(err, signature){
+                            }}).complete(function(err, signature){
                                 assert.equal(err, null);
+                                assert.notEqual(signature, null);
                                 assert.equal(signature.metadata, signature_metadata);
                                 assert.equal(signature.type, "r");
                                 done();
@@ -392,21 +406,20 @@ describe("Controller", function(){
             before(initializer.clear_db);
             before(initializer.create_node_and_rights);
             before(function(done){
-                models.Node.find_by({
+                models.Node.findOne({ where: {
                     "metadata": initializer.node_metadata,
                     "destroyed": false
-                }, function(err, node){
+                }}).complete(function(err, node){
                     if(err) return done(err);
-                    var user = new models.User({
+                    var user = models.User.build({
                         "public_key": "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9ac",
-                        "address": user_address,
-                        "node_id": node.id
+                        "address": user_address
                     });
-                    user.create(function(err, results){
+                    node.addUser(user).complete(function(){
                         if(err) return done(err);
                         done();
                     });
-                })
+                });
             });
 
             it("should create a 's' signature in the database", function(done){
@@ -420,24 +433,23 @@ describe("Controller", function(){
                     }
                 }, function(err){
                     assert.equal(err, null);
-                    models.Node.find_by({
+                    models.Node.findOne({ where: {
                         "metadata": initializer.node_metadata,
                         "destroyed": false
-                    }, function(err, node){
+                    }}).complete(function(err, node){
                         assert.equal(err, null);
                         assert.equal(node.metadata, initializer.node_metadata);
-                        models.User.find_by({
+                        models.User.findOne({ where: {
                             "node_id": node.id,
                             "address": user_address
-                        }, function(err, user){
+                        }}).complete(function(err, user){
                             assert.equal(err, null);
                             assert.equal(user.address, user_address);
-                            models.Signature.find_by({
+                            models.Signature.findOne({ where: {
                                 "user_id": user.id,
-                                "node_id": node.id,
                                 "type": "s",
                                 "metadata": signature_metadata
-                            }, function(err, signature){
+                            }}).complete(function(err, signature){
                                 assert.equal(err, null);
                                 assert.equal(signature.metadata, signature_metadata);
                                 assert.equal(signature.type, "s");
@@ -462,11 +474,10 @@ describe("Controller", function(){
                         "vout": 0
                     }
                 }, function(err, results){
-                    console.log(err);
-                    models.Node.find_by({
+                    models.Node.findOne({ where: {
                         "metadata": initializer.node_metadata,
                         "destroyed": false
-                    }, function(err, results){
+                    }}).complete(function(err, results){
                         assert.equal(err, null);
                         assert.equal(results, null);
                         done();
