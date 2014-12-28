@@ -2,11 +2,17 @@
 
 Bitcoin Blockchain Certification Protocol (BCC) is the technology powering bitcoin certification of equitybits. This protocol requires a middleman, which by no means have any rights of changing history (unless he carries out a 51% attack), removing the need of trusting the middleman.
 
+This protocol is similiar to timestamping services, except that it operates with private keys and publicly shared (via the blockchain) public keys and signatures. Hence, if it is cannot be agreed that certain document is signed some point in time, and the signatures are lost, it is possible to run a brute force attempt using all the signatures by a certain user.
+
 The beauty of the protocol is despite having the need of a middleman to broadcast a certification signature, the verification process can be carried out by any node in the blockchain using this protocol.
 
 This protocol opens up possibility to various events:
 
-* A company might want to sign certificate with an investor. While a party may issue a certificate and another will keep a copy, the chances of forging a certificate is high. With digital signatures and block chain we can easily eliminate that possibility.
+* A company might want to sign certificate with an investor.
+* A landlord might want to sign a contract with a tenant online.
+* A university may want to approve transcripts / degrees
+
+In all the above cases, the possibility of forging certificates cannot be ignored. Having irreversible history in the block chain eradicates the problem of fake documents.  
 
 ## Key Terms
 
@@ -20,19 +26,19 @@ This protocol opens up possibility to various events:
 
 ## Cryptography
 
-The underlying cryptography behind certification is the <a href="http://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm">ECDSA</a>, specifically the secp256k1, similiar to those employed by bitcoin.
+The underlying cryptography behind certification is the <a href="http://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm">ECDSA</a> and the curve secp256k1, similiar to those employed by bitcoin.
 
 ## Specification
 
-A node will have to initiallly broadcast an initialization transaction, announcing to other certification nodes that the node will be starting to certify transactions. One of the outputs (first output, specifically) will be . The concept of labelling output is inspired by colored coins.
+A node will have to initiallly broadcast an initialization transaction, announcing to other certification nodes that the node will be starting to certify transactions. One of the outputs (vout = 0, specifically) will be . The concept of labelling output is inspired by colored coins.
 
-To register a user to a node, the user should provide the node with a 33-byte compressed public key. The node will broadcast a transaction to the user, which contains certain op_codes and the 33-byte compressed public key. Then, the user should publish in a financial statement / shareholder report that he will be using this address for certification.
+To register a user to a node, the user should provide the node with a 33-byte compressed public key. The node will broadcast a transaction to the user's bitcoin address, which contains certain op_codes and the 33-byte compressed public key. Then, the user should publish in a financial statement / shareholder report that he will be using this address for certification.
 
 Signing a certificate should be done offline by the user himself. Then, the user should provide a copy of the document and the signature, which are two coordinates in the finite field. The node will broadcast two transactions into the bitcoin blockchain, one with the x-coordinates and another with the y-coordinates of the signature. Note that after this point, verifying the signature of a certificate and trivially be done by any party within the P2P network.
 
 ## Spreading of Node
 
-One of the limitation within the bitcoin network is the number of transactions per user per block. An easy way out is to create various certification nodes. This manner will however require an additional protocol to recognize such scenarios.
+One of the limitations of this method is horizontal scaling. An easy way out is to create various certification nodes. This manner will however require an additional protocol to recognize such scenarios.
 
 To solve this issue, a certification right can be divided to as many portion as possible within a transaction, with the first output being the administrator output. Hence, every bitcoin wallet which receives the certification rights output will have the right to certify new certificates. The wallet that owns the administrator output, will have the additional rights to spawn new children, terminate existing children or terminate the service as a whole.
 
@@ -59,10 +65,6 @@ The marker output (40 bytes) is in the following format:
 * **OP_CODE** - the op_code corresponding to the operation - 1 byte
 * **length of message** - the length of the instruction / key / signature - 1 byte
 * **message** - the signature / key / hash - 0-35 bytes
-
-## Address Format
-
-The format of an adress is similiar to those of bitcoin, except using version 0x27 for base58check encoding.
 
 ## Operations
 
