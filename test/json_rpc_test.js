@@ -13,7 +13,7 @@ var client = jayson.client.http({
     port: 9339,
     hostname: 'localhost'
 });
-var auth_token = "f99934ea8995dfe1fbd745ed5ed4e001f73fe6f2b82bac11848740adb029fa6a";
+var auth_token = "cceaace8f0ff80afe34aa2caada7f1d939992a88";
 
 var clear_db =  function(done){
     async.each(["User", "RightsOutput", "Node", "Signature"], function(name, inner_cb){
@@ -26,7 +26,7 @@ var clear_db =  function(done){
 };
 
 describe("JSON-RPC", function(){
-    describe("single user", function(){
+    describe("single node-user world", function(){
         var node_metadata = "f99934ea8995dfe1fbd745ed5ed4e001f73fe6f2b82bac11848740adb029fa6a111111";
         var user_address = "mkv8UXvSG3wRCFi7aQTQgfSSBwFf7ouuyW";
 
@@ -40,7 +40,7 @@ describe("JSON-RPC", function(){
         var stack = [];
         before(clear_db);
         before(function(done){
-
+            this.timeout(0);
             client.request("initialize", [auth_token, node_metadata], function(err, error, response){
                 if(err) return done(err);
                 stack.push(response);
@@ -66,18 +66,18 @@ describe("JSON-RPC", function(){
         });
     });
 
-    describe("multiple nodes complex", function(){
+    describe("multiple nodes execution", function(){
         var hexstrings = [];
-        var user_addresses = ["mkgK1RwAs2wQKSQsfXjhAXcyHy4Wrj6Wys", "mvm7JjdkMAqYt2b8VrJifnveHo3XWfLRBR"] ;
+        var user_addresses = ["mkgK1RwAs2wQKSQsfXjhAXcyHy4Wrj6Wys", "mvm7JjdkMAqYt2b8VrJifnveHo3XWfLRBR", "mg1RhF3FjAv45m2chuJCwTXoYLniZdKWSU"] ;
         var stack = [];
         // create 10 nodes
         // create 10 users per node, all same address as other nodes (should not raise any errors)
         // create 1 signature per user (hence total 1000 signatures)
         // each user-node has different public-private key pair
 
-        // before(clear_db);
+        before(clear_db);
         before(function(){
-            for(var i = 0 ; i < 1 ; i++) {
+            for(var i = 0 ; i < 2 ; i++) {
                 hexstrings.push("111111" + crypto.createHash("sha256").update(i.toString()).digest().toString("hex"));
             }
         });
@@ -85,7 +85,7 @@ describe("JSON-RPC", function(){
             this.timeout(0);
             var i = 0;
             async.forEach(hexstrings, function(node_metadata, cb){
-
+                console.log(node_metadata);
                 client.request("initialize", [auth_token, node_metadata], function(err, error, response){
                     if(err || error) return done(err || error);
                     stack.push(response);
@@ -130,7 +130,12 @@ describe("JSON-RPC", function(){
         it('should be fine', function(){
             console.log("the stack looks like");
             console.log(stack);
-            assert(stack.length == 210);
+            for(var i = 0 ; i < stack.length ; i++) {
+                if (stack.txid || (stack.r_txid && stack.s_txid)) {
+                    assert(true);                
+                }
+            }
+            assert(stack.length, 14);
         });
     })
 })
