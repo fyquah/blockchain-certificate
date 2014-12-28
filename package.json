@@ -24,6 +24,7 @@
     "q": "1.1.2",
     "secure-random": "1.1.1",
     "sequelize": "^2.0.0-rc4",
+    "sequelize-cli": "^1.0.1",
     "sqlite3": "3.0.4"
   },
   "devDependencies": {
