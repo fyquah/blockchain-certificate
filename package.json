@@ -9,8 +9,8 @@
     "blockchain-certificate": "./bin/blockchain-certificate"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "./blockchain-certificate"
+    "test": "./node_modules/.bin/mocha test",
+    "start": "./bin/blockchain-certificate"
   },
   "dependencies": {
     "async": "0.9.0",
