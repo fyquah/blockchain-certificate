@@ -21,6 +21,8 @@
     "ecurve": "1.0.0",
     "jayson": "1.1.2",
     "minimist": "1.1.0",
+    "mysql": "^2.5.4",
+    "pg": "^4.1.1",
     "q": "1.1.2",
     "secure-random": "1.1.1",
     "sequelize": "^2.0.0-rc4",
