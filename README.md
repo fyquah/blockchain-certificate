@@ -1,112 +1,63 @@
-# Bitcoin BlockChain Certification Protocol
+# BlockChain Certification Protocol
 
-Bitcoin Blockchain Certification Protocol (BCC) is the technology powering bitcoin certification of equitybits. This protocol requires a middleman, which by no means have any rights of changing history (unless he carries out a 51% attack), removing the need of trusting the middleman.
+Blockchain Certification Protocol is a protocol to digitally sign and verify documents in a semi-decentralized manner. Features include signature identification, decentralized signature verification and document timestamp and signature verification.
 
-This protocol is similiar to timestamping services, except that it operates with private keys and publicly shared (via the blockchain) public keys and signatures. Hence, if it is cannot be agreed that certain document is signed some point in time, and the signatures are lost, it is possible to run a brute force attempt using all the signatures by a certain user.
+This project is a finalist in the first <a href="http://imperial.ac.uk/bitcoin/">Imperial Bitcoin Forum</a>.
 
-The beauty of the protocol is despite having the need of a middleman to broadcast a certification signature, the verification process can be carried out by any node in the blockchain using this protocol.
+This document is about using this package to certify / verify documents, runnning tests, dependencies and using using the package. To read more about the protocol itself, click <a href="https://github.com/fyquah95/blockchain-certificate/blob/master/protocol.md">here</a>
 
-This protocol opens up possibility to various events:
+The package runs as a JSON RPC server. To make queries.
 
-* A company might want to sign certificate with an investor.
-* A landlord might want to sign a contract with a tenant online.
-* A university may want to approve transcripts / degrees
+## Dependencies
 
-In all the above cases, the possibility of forging certificates cannot be ignored. Having irreversible history in the block chain eradicates the problem of fake documents.  
+* Node.js (tested on 0.10.31)
+* npm (tested on 1.4.23)
+* Bitcoin daemon
 
-## Key Terms
+## Installation
 
-**Node** refers to a node in the bitcoin network which can acts as signature broadcasters
+~~~bash
+npm install # to install the dependencies
+~~~
 
-**User** refers to a party who wants certificates and hence signatures broadcasted in the blockchain.
+## Usage : JSON RPC Server
 
-**Certificate** refers to a real document that is to be digital signed by two users. Both users should agree on the certificate before signing it.
+~~~bash
+npm start # start the JSON RPC server
+~~~
 
-**Signature** refers to the digital signature of the certificate.
+This will start the JSON RPC server which listens to port `9339`. To specify a port:
 
-## Cryptography
+~~~bash
+npm start --port 1946
+~~~
 
-The underlying cryptography behind certification is the <a href="http://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm">ECDSA</a> and the curve secp256k1, similiar to those employed by bitcoin.
+## Usage : CommandLine
 
-## Specification
+Coming soon!
 
-A node will have to initiallly broadcast an initialization transaction, announcing to other certification nodes that the node will be starting to certify transactions. One of the outputs (vout = 0, specifically) will be . The concept of labelling output is inspired by colored coins.
+## Testing
 
-To register a user to a node, the user should provide the node with a 33-byte compressed public key. The node will broadcast a transaction to the user's bitcoin address, which contains certain op_codes and the 33-byte compressed public key. Then, the user should publish in a financial statement / shareholder report that he will be using this address for certification.
+The project employs <a target="_blank" href="http://mochajs.org/">mocha</a> to run tests. Test transactions happen in the testnet. Testing requires the following:
 
-Signing a certificate should be done offline by the user himself. Then, the user should provide a copy of the document and the signature, which are two coordinates in the finite field. The node will broadcast two transactions into the bitcoin blockchain, one with the x-coordinates and another with the y-coordinates of the signature. Note that after this point, verifying the signature of a certificate and trivially be done by any party within the P2P network.
+* running the testnet bitcoin daemon
+* Testnet wallet with approximately 1 BTC
+* a stable internet connection
 
-## Spreading of Node
+Then to test:
 
-One of the limitations of this method is horizontal scaling. An easy way out is to create various certification nodes. This manner will however require an additional protocol to recognize such scenarios.
+~~~bash
+./node_modules/mocha/bin/mocha test
+~~~
 
-To solve this issue, a certification right can be divided to as many portion as possible within a transaction, with the first output being the administrator output. Hence, every bitcoin wallet which receives the certification rights output will have the right to certify new certificates. The wallet that owns the administrator output, will have the additional rights to spawn new children, terminate existing children or terminate the service as a whole.
+## Todo
 
-## Rationale
+* Usage : Command Line
+* Documentation of methods
+* Run and test on newer versions of node.js
+* Implement Node spreading
+* Implement external event listener
 
-By utilizing bitcoin addresses, only the certifying-node will have to be certificate aware. The user(s) will not need specified wallets to certify real-world documents.
+## License
 
-In the case a middle-man node becomes non-trust-worthy, it is computational less worthy for him to certify an non-existing certificate. He is better off being honest and collecting a small transaction fee for certification services.
-
-## Transactions Format
-
-The first transaction input (except for node initialization) must be a certification right input, otherwise, such transaction is considered invalid BCC transaction.
-
-The transaction outputs are as follows :
-
-1. Certification Rights - An output corresponding to a transaction right
-2. Marker Output - An OP_RETURN output that contains specification of the transaction
-3. Affected address output - A transaction of arbirtary value to signify the affected address. there is only 1 at a time.
-4. Further outputs are irrelevant and considered to be regular bitcoin outputs.
-
-The marker output (40 bytes) is in the following format:
-
-* **namespace** - BCC 3 bytes
-* **OP_CODE** - the op_code corresponding to the operation - 1 byte
-* **length of message** - the length of the instruction / key / signature - 1 byte
-* **message** - the signature / key / hash - 0-35 bytes
-
-## Operations
-
-In the current version (0x01), there are the following op_codes
-
-<table>
-  <thead>
-    <th>OP Code</th>
-    <th>Description</th>
-  </thead>
-  <tbody>
-    <tr>
-      <td>0x00</td>
-      <td>The creation of a new certification Right</td>
-    </tr>
-    <tr>
-      <td>0x01</td>
-      <td>Binding an address to a 33 bit-compressed public key for the specific certification right</td>
-    </tr>
-    <tr>
-      <td>0x02</td>
-      <td>
-        The **r** / **x-coordinate** of signatures
-      </td>
-    </tr>
-    <tr>
-      <td>0x03</td>
-      <td>
-        The **s** / **y-coordinate** of signatures
-      </td>
-    </tr>
-    <tr>
-      <td>0xE0</td>
-      <td>Do nothing (outputs can be used to manage child-spawning)</td>
-    </tr>
-    <tr>
-      <td>0xF0</td>
-      <td>Destroying a child node</td>
-    </tr>
-    <tr>
-      <td>0xFF</td>
-      <td>Termination of service as a whole</td>
-    </tr>
-  </tbody>
-</table>
+MIT License
