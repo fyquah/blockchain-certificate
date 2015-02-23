@@ -17,6 +17,7 @@
     "bigi": "1.4.0",
     "bitcoinjs-lib": "1.4.2",
     "bs58check": "1.0.3",
+    "commander": "^2.6.0",
     "ecdsa": "0.6.0",
     "ecurve": "1.0.0",
     "jayson": "1.1.2",

@@ -1,0 +1,80 @@
+#!/usr/bin/env node
+var program = require("commander");
+var controller = require(__dirname + "/../lib/controllers/");
+
+var report_error = function(err){
+    console.error("An error occured!");
+    console.error(err);
+}
+
+var arr = [{
+    name: "listrights",
+    format: [],
+    type: "query",
+    description: "List all the output rights you currently have"
+},
+{
+    name: "listnodes",
+    format: [],
+    type: "query",
+    description: "List the nodes you have interacted before"
+},
+{
+    name: "listusers",
+    format: ["metadata"],
+    type: "query",
+    description: "List all the users / binded Bitcoin addresses for a certain node"
+},
+{
+    name: "verifysignature",
+    format: ["metadata", "address", "document", "signature_r", "signature_s"],
+    type: "query",
+    description: "Verify a signature"
+},
+{
+    name: "initialize",
+    format: ["metadata"],
+    type: "broadcast",
+    description: "initialize a node with a certain metadata"
+},
+{
+    name: "terminate",
+    format: ["metadata"],
+    description: "Terminate a node",
+    type: "broadcast"
+},
+{
+    name: "broadcastsignature",
+    format: ["metadata", "address", "document", "signature_r", "signature_s"],
+    description: "Broadcast a ECDSA Signature into the netowrk",
+    type: "broadcast"
+},
+{
+    name: "registeruser",
+    format: ["metadata", "address", "public_key"],
+    description: "Register a user in a node, and bind his address to a ECDSA Public Key",
+    type: "broadcast"
+}];
+
+program.version("0.0.2");
+
+arr.forEach(function(entry){
+    var str = entry.format.map(function(x){
+        return "<" + x + ">";
+    }).join(" ");
+    program.command(entry.name + " " + str).
+        description(entry.description).
+        action(function(){
+            var i, obj = {};
+            obj.method = entry.name;
+            for(i = 0 ; i < entry.format.length ; i++) {
+                obj[entry.format[i]] = arguments[i];
+            }
+            controller[entry.type](obj, function(err, res){
+                if(err) return report_error(err);
+                console.log("Response : ");
+                console.log(res);
+            })
+        });
+});
+program.parse(process.argv);
