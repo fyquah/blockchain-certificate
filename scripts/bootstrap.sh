@@ -11,6 +11,7 @@ sudo apt-get install bitcoind -y
 echo "Configuring JSONRPC for bitcoin."
 echo "Please enter a password for bitcoind daemon (approximately 30 random characters. You do NOT have to remember this password)"
 read -s bitcoin_rpc_password
+mkdir -p $HOME/.bitcoin
 echo "rpcuser=bitcoinrpc" >> "$HOME/.bitcoin/bitcoin.conf"
 echo "rpcpassword=$bitcoin_rpc_password" >> "$HOME/.bitcoin/bitcoin.conf"
 unset bitcoin_rpc_password
