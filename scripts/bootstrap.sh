@@ -10,10 +10,13 @@ sudo apt-get install bitcoind -y
 echo "Installing mysql client and server"
 echo "You will prompted for a password, please remember the password and select a secure one."
 echo "You are only required to remember it once throughout the installation process (it will be prompted later)"
-sudo apt-get install mysql-server-5.6 mysql-client-5.6 -y
+sudo apt-get install mysql-server mysql-client -y
+sudo service mysql start
 
 echo "Installing nvm and node.js"
 curl https://raw.githubusercontent.com/creationix/nvm/v0.23.3/install.sh | bash
+echo "Reloading shell to start using nvm"
+source ~/.bashrc # To make sure nvm is available for use
 nvm install 0.10.31
 nvm use 0.10.31
 nvm alias default 0.10.31
@@ -29,7 +32,7 @@ cd .blockchain-certificate
 mkdir logs
 
 echo "Choose a password for your mysql user!"
-read mysql_password
+read -s mysql_password
 echo "Creating mysql user"
 mysql -u root -p -e "CREATE USER 'bcpuser'@localhost IDENTIFIED BY '$mysql_password'"
 mysql -u root -p -e "CREATE DATABASE bcpproduction"
