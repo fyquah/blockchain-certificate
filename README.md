@@ -13,28 +13,44 @@ The package runs as a JSON RPC server. To make queries.
 * Node.js (tested on 0.10.31)
 * npm (tested on 1.4.23)
 * Bitcoin daemon
+* mysql
 
 ## Installation
 
 ~~~bash
-npm install blockchain-certificate
+curl -L https://raw.github.com/fyquah95/blockchain-certificate/develop/scripts/bootstrap.sh | sh
+~~~
+
+## In case you want to manually manage the dependencies
+
+~~~bash
+npm install -g blockchain-certificate
 ~~~
 
 ## Usage : JSON RPC Server
 
 ~~~bash
-npm start # start the JSON RPC server
+bcp-server # start the JSON RPC server
 ~~~
 
 This will start the JSON RPC server which listens to port `9339`. To specify a port:
 
 ~~~bash
-npm start --port 1946
+bcp-server --port 1946
+~~~
+
+## Usage : Daemon
+
+~~~bash
+bcp-deamon
 ~~~
 
 ## Usage : CommandLine
 
-Coming soon!
+~~~bash
+bcp-cli --help
+~~~
+
 
 ## Testing
 

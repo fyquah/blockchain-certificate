@@ -1,0 +1,1 @@
+nohup supervisor bcp-server 1>"$HOME/.blockchain-certificate/logs/stderr.log" 2>"$HOME/.blockchain-certificate/logs/stdout.log" &

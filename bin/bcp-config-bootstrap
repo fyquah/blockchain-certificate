@@ -1,0 +1,42 @@
+#!/usr/bin/env node
+// setup the config file (auth_token and testnet)
+var fs = require("fs");
+var assert = require('assert');
+var database_file_path = path.join(process.env["HOME"], ".blockchain-certificate/database.json");
+var config_file_path = path.join(process.env["HOME"], ".blockchain-certificate/config.json");
+
+assert(process.argv.length == 3);
+
+// setup database as appropriate
+var database_config = {
+    "development": {
+        "storage": path.join(process.env["HOME"], ".blockchain-certificate/test.sqlite3"),
+        "database":"blockchain-certificate",
+        "dialect":"sqlite"
+    },
+    "test":{
+        "storage": path.join(process.env["HOME"], ".blockchain-certificate/test.sqlite3"),
+        "database":"test",
+        "dialect":"sqlite"
+    },
+    "production":{
+        "database":"bcpproduction",
+        "dialect":"mysql",
+        "port":"3306",
+        "username": "bcpuser",
+        "password": process.argv[2] || Math.random.toString() + Math.random.toString(),
+        "host":"localhost"
+    }
+};
+
+console.log("Generated database config file!");
+fs.writeFileSync(database_file_path, JSON.stringify(database_config));
+
+// setup config file as appropriate
+var config = {
+    "auth_token": sr.randomBuffer(17).toString("hex"),
+    "testnet": process.env["TESTNET"] ? true : false
+}
+
+console.log("Generating config file!");
+fs.writeFileSync(config_file_path, JSON.stringify(config));

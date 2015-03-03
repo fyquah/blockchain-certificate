@@ -6,11 +6,14 @@
   "main": "lib/index.js",
   "preferGlobal": false,
   "bin": {
-    "blockchain-certificate": "./bin/blockchain-certificate"
+    "bcp-server": "./bin/bcp-server",
+    "bcp-cli": "./bin/bcp-cli",
+    "bcp-daemon": "./bin/bcp-daemon",
+    "bcp-config-bootstrap": "./bin/bcp-config-bootstrap"
   },
   "scripts": {
     "test": "./node_modules/.bin/mocha test",
-    "start": "./bin/blockchain-certificate"
+    "start": "./bin/bcp-server"
   },
   "dependencies": {
     "async": "0.9.0",
