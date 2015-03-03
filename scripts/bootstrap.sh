@@ -26,12 +26,10 @@ nvm install 0.10.31
 nvm use 0.10.31
 nvm alias default 0.10.31
 
-## NEED TO MAKE SURE IT PROPERTLY LOADS NVM INTO SHELL
-## REMEMBER CHANGE GIT REPOT INTO NPM PACKAGE AND UPDATE PACKAGE IN npm
-# BELOF THIS ALL OKAY
+## REMEMBER CHANGE GIT REPO INTO PROPER NPM PACKAGE AND UPDATE PACKAGE IN npm
 
 echo "Installing Blockchain-certificate Protocol"
-npm install -g https://github.com/fyquah95/blockchain-certificate#develop
+npm install -g fyquah95/blockchain-certificate#develop
 npm install -g supervisor
 
 # Create the necessary directories or setup the required users
@@ -43,11 +41,9 @@ mkdir logs
 echo "Choose a password for your mysql user!"
 read -s mysql_password
 echo "Creating mysql user"
-mysql -u root -p -e "CREATE USER 'bcpuser'@localhost IDENTIFIED BY '$mysql_password'"
-mysql -u root -p -e "CREATE DATABASE bcpproduction"
-mysql -u root -p -e "GRANT ALL on bcpproduction.* TO 'bcpuser'"
+mysql -u root -p -e "CREATE USER bcpuser IDENTIFIED BY '$mysql_password';CREATE DATABASE bcpproduction;GRANT ALL on bcpproduction.* TO bcpuser;"
 
-# Configure the environment variables here
+# Configure and define the environment variables
 echo "" >> "$HOME/.bashrc"
 echo "Do you want to run the server on the testnet?(y/n)"
 read run_on_test_net
@@ -60,13 +56,13 @@ fi
 
 echo "How much of transaction fee you want to incur for every transaction? (defaults to 0.0001)"
 read transaction_fee
-if [ "$transaction" == "" ]; then
+if [ "$transaction_fee" == "" ]; then
     echo "export TRANSACTION_FEE=0.0001" >> "$HOME/.bashrc"
 else
     echo "export TRANSACTION_FEE=($transaction_fee)">> "$HOME/.bashrc" 
 fi
 
-echo "How much you want to spend on every transaction?"
+echo "How much you want to spend on every transaction? (defaults to 0.0001)"
 read transaction_amount
 if [ "$transaction_amount" == "" ]; then
     echo "export TRANSACTION_AMOUNT=0.0001" >> "$HOME/.~bashrc"
@@ -86,5 +82,9 @@ bcp-config-bootstrap $mysql_password
 
 # startup the bcp!
 sudo service mysql restart
+echo "Unsetting some sensitive variables ..."
+unset mysql_password
+
+
 source ~/.bashrc
 echo "BCP is now ready to rock!"
