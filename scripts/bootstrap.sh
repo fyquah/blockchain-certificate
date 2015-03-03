@@ -7,11 +7,16 @@ sudo apt-add-repository ppa:bitcoin/bitcoin -y
 sudo apt-get update
 sudo apt-get install bitcoind -y
 
+echo "Installing git"
+sudo apt-get install git
+
 echo "Installing mysql client and server"
 echo "You will prompted for a password, please remember the password and select a secure one."
 echo "You are only required to remember it once throughout the installation process (it will be prompted later)"
 sudo apt-get install mysql-server mysql-client -y
 sudo service mysql start
+
+# SETPS ABOVE HERE ARE OKAY
 
 echo "Installing nvm and node.js"
 curl https://raw.githubusercontent.com/creationix/nvm/v0.23.3/install.sh | bash
@@ -21,8 +26,12 @@ nvm install 0.10.31
 nvm use 0.10.31
 nvm alias default 0.10.31
 
+## NEED TO MAKE SURE IT PROPERTLY LOADS NVM INTO SHELL
+## REMEMBER CHANGE GIT REPOT INTO NPM PACKAGE AND UPDATE PACKAGE IN npm
+# BELOF THIS ALL OKAY
+
 echo "Installing Blockchain-certificate Protocol"
-npm install -g blockchain-certificate
+npm install -g https://github.com/fyquah95/blockchain-certificate#develop
 npm install -g supervisor
 
 # Create the necessary directories or setup the required users
@@ -36,7 +45,7 @@ read -s mysql_password
 echo "Creating mysql user"
 mysql -u root -p -e "CREATE USER 'bcpuser'@localhost IDENTIFIED BY '$mysql_password'"
 mysql -u root -p -e "CREATE DATABASE bcpproduction"
-mysql -u root -p -e "GRANT ALL on bcpproduction TO bcpuser"
+mysql -u root -p -e "GRANT ALL on bcpproduction.* TO 'bcpuser'"
 
 # Configure the environment variables here
 echo "" >> "$HOME/.bashrc"
@@ -62,13 +71,14 @@ read transaction_amount
 if [ "$transaction_amount" == "" ]; then
     echo "export TRANSACTION_AMOUNT=0.0001" >> "$HOME/.~bashrc"
 else
-    echo "export TRANSACTION_AMOUNT=$(transaction_amount)" >> "$HOME/.bashrc"
+    echo "export TRANSACTION_AMOUNT=$transaction_amount" >> "$HOME/.bashrc"
 fi
 
 echo "export NODE_ENV='production'" >> "$HOME/.bashrc"
 
 source ~/.bashrc
 
+# CHECK IF CONFIG FILE ACTUALLY WORKS
 # Now do the .blockchain-certificate config files
 echo "What is your mysql user's password? The password is the one we prompted for just now."
 read mysql_password
