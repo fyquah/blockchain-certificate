@@ -1,6 +1,6 @@
 {
   "name": "blockchain-certificate",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "author": "fuyong@fyquah.me",
   "description": "a service to make certificates in the blockchain. Anyone can issue certificates",
   "main": "lib/index.js",

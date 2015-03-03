@@ -12,7 +12,7 @@ assert(process.argv.length == 3);
 // setup database as appropriate
 var database_config = {
     "development": {
-        "storage": path.join(process.env["HOME"], ".blockchain-certificate/test.sqlite3"),
+        "storage": path.join(process.env["HOME"], ".blockchain-certificate/development.sqlite3"),
         "database":"blockchain-certificate",
         "dialect":"sqlite"
     },
