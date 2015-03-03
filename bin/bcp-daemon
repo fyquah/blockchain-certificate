@@ -1,2 +1,3 @@
 #!/bin/bash
+echo "Daemon assumes supervisor is installed!"
 nohup supervisor bcp-server 1>"$HOME/.blockchain-certificate/logs/stderr.log" 2>"$HOME/.blockchain-certificate/logs/stdout.log" &

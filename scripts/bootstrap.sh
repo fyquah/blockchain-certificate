@@ -1,14 +1,19 @@
 #!/bin/bash
 cd $HOME
 
-# Install all the dependencies first
+echo "Installing git"
+sudo apt-get install git
+
 echo "Installing bitcoind and bitcoin-cli"
 sudo apt-add-repository ppa:bitcoin/bitcoin -y
 sudo apt-get update
 sudo apt-get install bitcoind -y
-
-echo "Installing git"
-sudo apt-get install git
+echo "Configuring JSONRPC for bitcoin."
+echo "Please enter a password for bitcoind daemon (approximately 30 random characters. You do NOT have to remember this password)"
+read -s bitcoin_rpc_password
+echo "rpcuser=bitcoinrpc" >> "$HOME/.bitcoin/bitcoin.conf"
+echo "rpcpassword=$bitcoin_rpc_password" >> "$HOME/.bitcoin/bitcoin.conf"
+unset bitcoin_rpc_password
 
 echo "Installing mysql client and server"
 echo "You will prompted for a password, please remember the password and select a secure one."
@@ -29,7 +34,7 @@ nvm alias default 0.10.31
 ## REMEMBER CHANGE GIT REPO INTO PROPER NPM PACKAGE AND UPDATE PACKAGE IN npm
 
 echo "Installing Blockchain-certificate Protocol"
-npm install -g fyquah95/blockchain-certificate#develop
+npm install -g blockchain-certificate
 npm install -g supervisor
 
 # Create the necessary directories or setup the required users
@@ -77,14 +82,21 @@ source ~/.bashrc
 # CHECK IF CONFIG FILE ACTUALLY WORKS
 # Now do the .blockchain-certificate config files
 echo "What is your mysql user's password? The password is the one we prompted for just now."
-read mysql_password
+echo "Make sure it is the right password. We will NOT carry out any form of validation!"
+read -s mysql_password
 bcp-config-bootstrap $mysql_password
-
-# startup the bcp!
-sudo service mysql restart
-echo "Unsetting some sensitive variables ..."
 unset mysql_password
 
+# startup MYSQL and bitcoind
+sudo service mysql restart
+if [ "$TESTNET" == "true" ];then
+    echo "Running testnet daemon"
+    bitcoind --testnet -daemon
+else
+    echo "Running mainnet daemon"
+    bitcoind -daemon
+fi
 
 source ~/.bashrc
 echo "BCP is now ready to rock!"
+echo "Just hit bcp-daemon to start the daemon!"
