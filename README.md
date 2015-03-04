@@ -18,7 +18,7 @@ The package runs as a JSON RPC server. To make queries.
 ## Installation
 
 ~~~bash
-source <(curl -L https://raw.github.com/fyquah95/blockchain-certificate/develop/scripts/bootstrap.sh)
+source <(curl -L https://raw.github.com/fyquah95/blockchain-certificate/master/scripts/bootstrap.sh)
 ~~~
 
 ## In case you want to manually manage the dependencies
